@@ -468,6 +468,12 @@ public class Ellipse extends AbstractShape {
     }
 
     protected void assembleGeometry(RenderContext rc) {
+        // Clear the shape's vertex array and element arrays. These arrays will accumulate values as the shapes's
+        // geometry is assembled.
+        this.vertexArray.clear();
+        this.interiorElements.clear();
+        this.outlineElements.clear();
+
         // Verify the intervals value is even
         if (this.intervals % 2 != 0) {
             this.intervals--;
