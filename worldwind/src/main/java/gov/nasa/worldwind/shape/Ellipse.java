@@ -23,7 +23,6 @@ import gov.nasa.worldwind.util.FloatArray;
 import gov.nasa.worldwind.util.Logger;
 import gov.nasa.worldwind.util.Pool;
 import gov.nasa.worldwind.util.ShortArray;
-import gov.nasa.worldwind.util.WWMath;
 
 /**
  * Ellipse shape defined by a geographic center position and radii for the semi-major and semi-minor axes.
@@ -95,6 +94,11 @@ public class Ellipse extends AbstractShape {
      */
     protected int intervals;
 
+    /**
+     * The maximum number of pixels a single edge element should span before the shape adds elements.
+     */
+    protected double maxPixelSpan = 30;
+
     protected FloatArray vertexArray = new FloatArray();
 
     protected ShortArray interiorElements = new ShortArray();
@@ -107,7 +111,7 @@ public class Ellipse extends AbstractShape {
 
     private static final Position SCRATCH = new Position();
 
-    protected Vec3 nearestPoint = new Vec3();
+    protected static final Vec3 POINT = new Vec3();
 
     protected static Object nextCacheKey() {
         return new Object();
@@ -583,42 +587,57 @@ public class Ellipse extends AbstractShape {
             return MIN_INTERVALS;
         }
 
-        double distance = this.distanceToCamera(rc);
-        int intervals = (int) (33709613.0 / distance); // The nominator value was determined through empirical testing
+        int currentIntervals = MIN_INTERVALS;
+        double maxPixelSquared = this.maxPixelSpan * this.maxPixelSpan;
+
+        double circumference = this.calculateCircumference();
+        // Project vector of interval value to screen space to get an idea of the pixel span for one interval
+        rc.geographicToCartesian(this.center.latitude, this.center.longitude, this.center.altitude, this.altitudeMode, POINT);
+        POINT.multiplyByMatrix(rc.modelviewProjection);
+        double x0 = POINT.x * (double) rc.viewport.width;
+        double y0 = POINT.y * (double) rc.viewport.height;
+
+        // Evenly distribute the intervals
+        double intervalDelta = (this.maximumIntervals - MIN_INTERVALS) / 5;
+
+        for (int i = 0; i < 5; i++) {
+            // Divide by current interval value
+            double distancePerInterval = circumference / currentIntervals;
+            this.center.greatCircleLocation(0, distancePerInterval / rc.globe.getRadiusAt(this.center.latitude, this.center.longitude), SCRATCH);
+            rc.geographicToCartesian(SCRATCH.latitude, SCRATCH.longitude, SCRATCH.altitude, this.altitudeMode, POINT);
+            POINT.multiplyByMatrix(rc.modelviewProjection);
+            double x1 = POINT.x * (double) rc.viewport.width;
+            double y1 = POINT.y * (double) rc.viewport.height;
+
+            // Check if screen space value exceeds maxPixelSpan
+            double diff = (x0 - x1) * (x0 - x1) + (y1 - y0) * (y1 - y0);
+            if (diff > maxPixelSquared) {
+                currentIntervals += intervalDelta;
+            } else {
+                break;
+            }
+        }
+
         // Intervals must be divisible by two, this check is repeated in the assembleGeometry method
-        if (intervals % 2 != 0) {
-            intervals--;
+        if (currentIntervals % 2 != 0) {
+            currentIntervals--;
         }
 
-        if (intervals > this.maximumIntervals) {
-            intervals = this.maximumIntervals;
+        if (currentIntervals > this.maximumIntervals) {
+            currentIntervals = this.maximumIntervals;
         }
 
-        if (intervals < MIN_INTERVALS) {
-            intervals = MIN_INTERVALS;
+        if (currentIntervals < MIN_INTERVALS) {
+            currentIntervals = MIN_INTERVALS;
         }
 
-        return intervals;
+        return currentIntervals;
     }
 
-    private double distanceToCamera(RenderContext rc) {
-        // implementation borrowed from Tile
-        // determine the nearest latitude
-        double nearestLat = WWMath.clamp(rc.camera.latitude, this.boundingSector.minLatitude(), this.boundingSector.maxLatitude());
-        // determine the nearest longitude and account for the antimeridian discontinuity
-        double nearestLon;
-        double lonDifference = rc.camera.longitude - this.boundingSector.centroidLongitude();
-        if (lonDifference < -180.0) {
-            nearestLon = this.boundingSector.maxLongitude();
-        } else if (lonDifference > 180.0) {
-            nearestLon = this.boundingSector.minLongitude();
-        } else {
-            nearestLon = WWMath.clamp(rc.camera.longitude, this.boundingSector.minLongitude(), this.boundingSector.maxLongitude());
-        }
-
-        rc.geographicToCartesian(nearestLat, nearestLon, 0, this.altitudeMode, this.nearestPoint);
-
-        return rc.cameraPoint.distanceTo(this.nearestPoint);
+    private double calculateCircumference() {
+        double a = this.majorRadius;
+        double b = this.minorRadius;
+        return Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)));
     }
 
     @Override
