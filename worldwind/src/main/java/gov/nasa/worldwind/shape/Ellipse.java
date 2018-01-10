@@ -374,11 +374,7 @@ public class Ellipse extends AbstractShape {
             return; // nothing to draw
         }
 
-        // Interval count is determined by camera distance, if the interval has changed then the vertices need to be
-        // regenerated
-        int calculatedIntervals = this.calculateIntervals(rc);
-        if (this.mustAssembleGeometry(rc) || (calculatedIntervals != this.intervals)) {
-            this.intervals = calculatedIntervals;
+        if (this.mustAssembleGeometry(rc)) {
             this.assembleGeometry(rc);
             this.assembleElements(rc);
             this.vertexBufferKey = nextCacheKey();
@@ -464,7 +460,13 @@ public class Ellipse extends AbstractShape {
     }
 
     protected boolean mustAssembleGeometry(RenderContext rc) {
-        return this.vertexArray.size() == 0;
+        int calculatedIntervals = this.calculateIntervals(rc);
+        if (this.vertexArray.size() == 0 || calculatedIntervals != this.intervals) {
+            this.intervals = calculatedIntervals;
+            return true;
+        }
+
+        return false;
     }
 
     protected void assembleGeometry(RenderContext rc) {
