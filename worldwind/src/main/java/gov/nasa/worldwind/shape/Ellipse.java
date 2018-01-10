@@ -109,7 +109,7 @@ public class Ellipse extends AbstractShape {
 
     protected Object elementBufferKey = nextCacheKey();
 
-    private static final Position SCRATCH = new Position();
+    protected static final Position POSITION = new Position();
 
     protected static final Vec3 POINT = new Vec3();
 
@@ -514,8 +514,8 @@ public class Ellipse extends AbstractShape {
             double arcRadius = Math.sqrt(x * x + y * y);
             // Calculate the great circle location given this intervals step (azimuthDegrees) a correction value to
             // start from an east-west aligned major axis (90.0) and the user specified user heading value
-            this.center.greatCircleLocation(azimuthDegrees + headingAdjustment + this.heading, arcRadius, SCRATCH);
-            this.addVertex(rc, SCRATCH.latitude, SCRATCH.longitude, 0);
+            this.center.greatCircleLocation(azimuthDegrees + headingAdjustment + this.heading, arcRadius, POSITION);
+            this.addVertex(rc, POSITION.latitude, POSITION.longitude, 0);
             // Add the major arc radius for the spine points. Spine points are vertically coincident with exterior
             // points. The first and middle most point do not have corresponding spine points.
             if (i > 0 && i < this.intervals / 2) {
@@ -525,8 +525,8 @@ public class Ellipse extends AbstractShape {
 
         // Add the interior spine point vertices
         for (int i = 0; i < spinePoints; i++) {
-            this.center.greatCircleLocation(0 + headingAdjustment + this.heading, spineRadius[i], SCRATCH);
-            this.addVertex(rc, SCRATCH.latitude, SCRATCH.longitude, 0);
+            this.center.greatCircleLocation(0 + headingAdjustment + this.heading, spineRadius[i], POSITION);
+            this.addVertex(rc, POSITION.latitude, POSITION.longitude, 0);
         }
 
 
@@ -603,8 +603,8 @@ public class Ellipse extends AbstractShape {
         for (int i = 0; i < 5; i++) {
             // Divide by current interval value
             double distancePerInterval = circumference / currentIntervals;
-            this.center.greatCircleLocation(0, distancePerInterval / rc.globe.getRadiusAt(this.center.latitude, this.center.longitude), SCRATCH);
-            rc.geographicToCartesian(SCRATCH.latitude, SCRATCH.longitude, SCRATCH.altitude, this.altitudeMode, POINT);
+            this.center.greatCircleLocation(0, distancePerInterval / rc.globe.getRadiusAt(this.center.latitude, this.center.longitude), POSITION);
+            rc.geographicToCartesian(POSITION.latitude, POSITION.longitude, POSITION.altitude, this.altitudeMode, POINT);
             POINT.multiplyByMatrix(rc.modelviewProjection);
             double x1 = POINT.x * (double) rc.viewport.width;
             double y1 = POINT.y * (double) rc.viewport.height;
