@@ -603,15 +603,25 @@ public class Ellipse extends AbstractShape {
         for (int i = 0; i < 5; i++) {
             // Divide by current interval value
             double distancePerInterval = circumference / currentIntervals;
+
+            // Determine the first leg to test (0 azimuth)
             this.center.greatCircleLocation(0, distancePerInterval / rc.globe.getRadiusAt(this.center.latitude, this.center.longitude), POSITION);
             rc.geographicToCartesian(POSITION.latitude, POSITION.longitude, POSITION.altitude, this.altitudeMode, POINT);
             POINT.multiplyByMatrix(rc.modelviewProjection);
             double x1 = POINT.x * (double) rc.viewport.width;
             double y1 = POINT.y * (double) rc.viewport.height;
 
+            // Determine the second leg to test (90 azimuth)
+            this.center.greatCircleLocation(90, distancePerInterval / rc.globe.getRadiusAt(this.center.latitude, this.center.longitude), POSITION);
+            rc.geographicToCartesian(POSITION.latitude, POSITION.longitude, POSITION.altitude, this.altitudeMode, POINT);
+            POINT.multiplyByMatrix(rc.modelviewProjection);
+            double x2 = POINT.x * (double) rc.viewport.width;
+            double y2 = POINT.y * (double) rc.viewport.height;
+
             // Check if screen space value exceeds maxPixelSpan
-            double diff = (x0 - x1) * (x0 - x1) + (y1 - y0) * (y1 - y0);
-            if (diff > maxPixelSquared) {
+            double diff1 = (x0 - x1) * (x0 - x1) + (y1 - y0) * (y1 - y0);
+            double diff2 = (x0 - x2) * (x0 - x2) + (y2 - y0) * (y2 - y0);
+            if (Math.max(diff1, diff2) > maxPixelSquared) {
                 currentIntervals += intervalDelta;
             } else {
                 break;
