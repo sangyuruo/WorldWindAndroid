@@ -13,7 +13,7 @@ import gov.nasa.worldwind.util.WWMath;
 
 public class Ellipse2 extends Ellipse {
 
-    protected double pixelsPerInterval = 50;
+    protected double maximumPixelsPerInterval = 50;
 
     protected int detailLevels = 5;
 
@@ -41,8 +41,8 @@ public class Ellipse2 extends Ellipse {
         int calculatedIntervals = MIN_INTERVALS;
         double deltaIntervals = (this.maximumIntervals - MIN_INTERVALS) / this.detailLevels;
         for (int i = 0; i < this.detailLevels; i++) {
-            double circumferenceDensity = circumference / calculatedIntervals;
-            if (circumferenceDensity < pixelSizeAtDistance * this.pixelsPerInterval) {
+            double metersPerInterval = circumference / calculatedIntervals;
+            if (metersPerInterval < pixelSizeAtDistance * this.maximumPixelsPerInterval) {
                 break;
             }
             calculatedIntervals += deltaIntervals;
